@@ -109,7 +109,6 @@ jobs:
       DATABASE_URL: 'file:./prisma/pulsedns.db'
       PORT: '3000'
       ENABLE_WORKER: 'true'
-      NODE_ENV: 'production'
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -208,7 +207,7 @@ jobs:
           echo "Audit completed. Report logged."
 
       - name: Run Trivy Vulnerability & Secret Scanner
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
