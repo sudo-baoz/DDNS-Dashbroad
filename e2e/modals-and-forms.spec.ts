@@ -2,9 +2,17 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Modal & Interactive Forms Suite', () => {
   test('Cloudflare Connect Modal & Job Modal Interactivity', async ({ page }) => {
-    // Login
-    await page.goto('http://localhost:3000/login');
-    if (page.url().includes('/login')) {
+    // Ensure authenticated session
+    await page.goto('http://localhost:3000/');
+    await page.waitForTimeout(500);
+    const currentUrl = page.url();
+    if (currentUrl.includes('/setup')) {
+      await page.fill('input[placeholder="admin"]', 'admin');
+      await page.locator('input[type="password"]').first().fill('MasterPass123!');
+      await page.locator('input[type="password"]').nth(1).fill('MasterPass123!');
+      await page.click('button:has-text("Initialize PulseDNS Dashboard")');
+      await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
+    } else if (currentUrl.includes('/login')) {
       await page.fill('input[placeholder="admin"]', 'admin');
       await page.fill('input[type="password"]', 'MasterPass123!');
       await page.click('button:has-text("Sign In")');

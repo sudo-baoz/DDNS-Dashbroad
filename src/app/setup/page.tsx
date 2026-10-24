@@ -54,7 +54,7 @@ export default function SetupPage() {
       }
 
       toast.success('PulseDNS configured successfully!');
-      router.push('/');
+      window.location.href = '/';
     } catch (err: any) {
       setError(err.message || 'Setup failed.');
     } finally {

@@ -295,7 +295,7 @@ export default function IntegrationsPage() {
               />
             </div>
             <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-              Create an API token in your Cloudflare dashboard with Template: <em>"Edit zone DNS"</em>.
+              Create an API token in your Cloudflare dashboard with Template: <em>&quot;Edit zone DNS&quot;</em>.
               PulseDNS encrypts this token with AES-256-GCM before saving to disk.
             </p>
           </div>
