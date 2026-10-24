@@ -1,0 +1,34 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing & Artifacts
+/coverage
+/test-results
+/playwright-report
+/blob-report
+
+# Next.js Build
+/.next/
+/out/
+
+# Production Build
+/build
+
+# Local Databases & Secrets
+*.db
+*.db-journal
+.env
+.env*.local
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS Files
+.DS_Store
+*.pem

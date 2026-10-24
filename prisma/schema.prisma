@@ -1,0 +1,153 @@
+// PulseDNS Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProviderIntegration {
+  id                   String      @id @default(cuid())
+  provider             String      // "cloudflare"
+  name                 String
+  encryptedCredentials String      // Encrypted JSON
+  iv                   String      // Initialization Vector
+  tag                  String      // Auth Tag
+  status               String      @default("CONNECTED") // "CONNECTED", "ERROR", "DISCONNECTED"
+  statusMessage        String?
+  lastVerifiedAt       DateTime?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  zones                DnsZone[]
+  records              DnsRecord[]
+}
+
+model DnsZone {
+  id             String              @id @default(cuid())
+  providerId     String
+  zoneIdentifier String              // Provider zone ID (e.g. Cloudflare zone id)
+  name           String              // domain name e.g. "example.com"
+  status         String              @default("active")
+  paused         Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  provider       ProviderIntegration @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  records        DnsRecord[]
+}
+
+model DnsRecord {
+  id               String              @id @default(cuid())
+  providerId       String
+  zoneId           String
+  recordIdentifier String              // Provider record ID
+  name             String              // e.g. "sub.example.com"
+  type             String              // "A" or "AAAA"
+  content          String              // current IP
+  proxied          Boolean             @default(false)
+  ttl              Int                 @default(1)
+  isManaged        Boolean             @default(false)
+  lastDetectedIp   String?
+  lastUpdatedAt    DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  provider         ProviderIntegration @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  zone             DnsZone             @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  jobs             DdnsJob[]
+  history          IpHistory[]
+}
+
+model RemoteAgent {
+  id             String    @id @default(cuid())
+  name           String
+  tokenHash      String    @unique // SHA-256 hash of agent bearer token
+  lastReportedIp String?
+  lastSeenAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  jobs           DdnsJob[]
+}
+
+model DdnsJob {
+  id               String          @id @default(cuid())
+  name             String
+  recordId         String
+  ipVersion        String          @default("IPv4") // "IPv4" or "IPv6"
+  sourceMode       String          @default("SERVER_IP") // "SERVER_IP" or "REMOTE_AGENT"
+  remoteAgentId    String?
+  intervalSeconds  Int             @default(300)
+  enabled          Boolean         @default(true)
+  status           String          @default("IDLE") // "IDLE", "RUNNING", "SUCCESS", "FAILED"
+  lastExecutionAt  DateTime?
+  nextExecutionAt  DateTime?
+  lastError        String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  record           DnsRecord       @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  remoteAgent      RemoteAgent?    @relation(fields: [remoteAgentId], references: [id], onDelete: SetNull)
+  executions       DdnsExecution[]
+}
+
+model DdnsExecution {
+  id          String   @id @default(cuid())
+  jobId       String
+  detectedIp  String
+  previousIp  String?
+  status      String   // "SUCCESS", "NO_CHANGE", "FAILED"
+  message     String?
+  durationMs  Int      @default(0)
+  executedAt  DateTime @default(now())
+  job         DdnsJob  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model IpHistory {
+  id        String    @id @default(cuid())
+  recordId  String
+  oldIp     String?
+  newIp     String
+  source    String    // "SERVER_IP", "REMOTE_AGENT", "MANUAL"
+  changedAt DateTime  @default(now())
+  record    DnsRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // "DNS_UPDATE", "IP_CHANGE", "AUTH_LOGIN", "CONFIG_CHANGE", "PROVIDER_ERROR"
+  severity    String   @default("INFO") // "INFO", "WARN", "ERROR", "SUCCESS"
+  description String
+  metadata    String?  // JSON string
+  createdAt   DateTime @default(now())
+}
+
+model ApplicationSettings {
+  id                 String    @id @default("default")
+  dashboardName      String    @default("PulseDNS")
+  timezone           String    @default("UTC")
+  defaultTheme       String    @default("dark")
+  defaultInterval    Int       @default(300)
+  ipv4SourceUrls     String    @default("https://api.ipify.org,https://icanhazip.com,https://ifconfig.me/ip")
+  ipv6SourceUrls     String    @default("https://api6.ipify.org,https://ipv6.icanhazip.com")
+  requestTimeoutSec  Int       @default(10)
+  maxRetries         Int       @default(3)
+  workerHeartbeat    DateTime?
+  updatedAt          DateTime  @updatedAt
+}
