@@ -8,7 +8,9 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:unit": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:push": "prisma db push",
@@ -45,6 +47,8 @@
     "@playwright/test": "^1.64.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.24",
     "vitest": "^5.0.5"
   }
 }

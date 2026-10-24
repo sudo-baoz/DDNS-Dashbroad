@@ -43,7 +43,7 @@ export default function LoginPage() {
       }
 
       toast.success(`Welcome back, ${data.user.username}!`);
-      router.push('/');
+      window.location.href = '/';
     } catch (err: any) {
       setError(err.message || 'Login failed.');
     } finally {

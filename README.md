@@ -1,6 +1,12 @@
 # PulseDNS — Production-Ready DDNS Management Dashboard
 
 <p align="center">
+  <a href="https://github.com/sudo-baoz/DDNS-Dashbroad/actions/workflows/ci.yml"><img src="https://github.com/sudo-baoz/DDNS-Dashbroad/actions/workflows/ci.yml/badge.svg" alt="CI/CD Pipeline" /></a>
+  <a href="https://github.com/sudo-baoz/DDNS-Dashbroad/actions/workflows/security.yml"><img src="https://github.com/sudo-baoz/DDNS-Dashbroad/actions/workflows/security.yml/badge.svg" alt="Security Analysis" /></a>
+  <a href="https://github.com/sudo-baoz/DDNS-Dashbroad/pkgs/container/ddns-dashbroad"><img src="https://img.shields.io/badge/GHCR-Docker%20Image-blue?logo=docker" alt="GHCR Docker Image" /></a>
+</p>
+
+<p align="center">
   <img src="screenshots/dashboard_1440px.png" alt="PulseDNS Operational Dashboard" width="850" />
 </p>
 
@@ -126,6 +132,8 @@ npx playwright test e2e/screenshots.spec.ts --project="Desktop Chrome"
 
 ## Documentation Index
 
+- [CI/CD Pipeline & GitHub Actions](docs/CI-CD.md)
+- [Docker Production Deployment](docs/DOCKER-DEPLOYMENT.md)
 - [Architecture & Provider Plugins](ARCHITECTURE.md)
 - [Production Deployment Guide](DEPLOYMENT.md)
 - [Security Model & Threat Defenses](SECURITY.md)

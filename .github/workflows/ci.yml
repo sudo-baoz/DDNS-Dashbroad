@@ -1,0 +1,299 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - 'releases/**'
+      - 'feat/**'
+      - 'fix/**'
+    tags:
+      - 'v*.*.*'
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  merge_group:
+  workflow_dispatch:
+    inputs:
+      publish_override:
+        description: 'Force publish to GHCR (main branch only)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ----------------------------------------------------------------------------
+  # 1. Code Quality: ESLint + TypeScript Typecheck
+  # ----------------------------------------------------------------------------
+  quality:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript Strict Typecheck
+        run: npm run typecheck
+
+  # ----------------------------------------------------------------------------
+  # 2. Unit & Integration Tests (Vitest)
+  # ----------------------------------------------------------------------------
+  unit-tests:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SESSION_SECRET: 'ci-testing-session-secret-random-32chars-minimum-ok'
+      ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+      DATABASE_URL: 'file:./prisma/pulsedns.db'
+      PORT: '3000'
+      ENABLE_WORKER: 'false'
+      NODE_ENV: 'test'
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client & Database Schema
+        run: |
+          npx prisma generate
+          npx prisma db push
+
+      - name: Execute Vitest Suite
+        run: npm run test:unit
+
+  # ----------------------------------------------------------------------------
+  # 3. End-to-End Browser Tests (Playwright)
+  # ----------------------------------------------------------------------------
+  e2e-tests:
+    name: Playwright E2E Browser Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SESSION_SECRET: 'ci-testing-session-secret-random-32chars-minimum-ok'
+      ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+      DATABASE_URL: 'file:./prisma/pulsedns.db'
+      PORT: '3000'
+      ENABLE_WORKER: 'true'
+      NODE_ENV: 'production'
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Initialize Database & Build Next.js
+        run: |
+          npx prisma generate
+          npx prisma db push
+          npm run build
+
+      - name: Run Playwright Tests
+        run: npx playwright test e2e/pulsedns.spec.ts e2e/modals-and-forms.spec.ts
+
+      - name: Upload Test Artifacts on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+  # ----------------------------------------------------------------------------
+  # 4. Docker Build & Runtime Smoke Test
+  # ----------------------------------------------------------------------------
+  docker-smoke:
+    name: Docker Build & Runtime Smoke Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Local Test Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true
+          tags: pulsedns:smoke-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Execute Container Runtime Smoke Test
+        run: |
+          chmod +x scripts/smoke-test.sh
+          ./scripts/smoke-test.sh pulsedns:smoke-test 3055
+
+  # ----------------------------------------------------------------------------
+  # 5. Security & Vulnerability Scan
+  # ----------------------------------------------------------------------------
+  security-scan:
+    name: Security & Vulnerability Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run NPM Audit Report
+        id: npm_audit
+        run: |
+          echo "### 🔒 Dependency Audit Report" >> $GITHUB_STEP_SUMMARY
+          npm audit --json > audit-report.json || true
+          VULN_COUNT=$(jq '.metadata.vulnerabilities.total // 0' audit-report.json)
+          CRIT_COUNT=$(jq '.metadata.vulnerabilities.critical // 0' audit-report.json)
+          HIGH_COUNT=$(jq '.metadata.vulnerabilities.high // 0' audit-report.json)
+          echo "- **Total Vulnerabilities**: ${VULN_COUNT}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Critical**: ${CRIT_COUNT}" >> $GITHUB_STEP_SUMMARY
+          echo "- **High**: ${HIGH_COUNT}" >> $GITHUB_STEP_SUMMARY
+          echo "Audit completed. Report logged."
+
+      - name: Run Trivy Vulnerability & Secret Scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+  # ----------------------------------------------------------------------------
+  # 6. Publish Multi-Platform Image to GHCR (Main & Tags Only)
+  # ----------------------------------------------------------------------------
+  publish-ghcr:
+    name: Publish Container Image (GHCR)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs:
+      - quality
+      - unit-tests
+      - e2e-tests
+      - docker-smoke
+      - security-scan
+    # Strictly execute on trusted pushes to main, version tags, or authorized manual dispatch
+    if: >
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (for multi-platform linux/arm64 & linux/amd64)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker Image Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and Push Multi-Architecture Image
+        id: docker_build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate Publication Summary
+        run: |
+          echo "## 🚀 Docker Image Successfully Published to GHCR" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Digest**: \`${{ steps.docker_build.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags Published**:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Pull and Run Example" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker run -d -p 3000:3000 -v ./data:/app/data --name pulsedns ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

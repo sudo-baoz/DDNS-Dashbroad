@@ -382,7 +382,7 @@ export default function RecordsPage() {
             <Layers className="w-10 h-10 mx-auto text-slate-600 mb-2" />
             <p className="font-semibold text-slate-300">No DNS Records Found</p>
             <p className="text-[11px] text-slate-500 mt-1">
-              Click "New Managed Record" or synchronize zones from Cloudflare.
+              Click &quot;New Managed Record&quot; or synchronize zones from Cloudflare.
             </p>
           </div>
         )}

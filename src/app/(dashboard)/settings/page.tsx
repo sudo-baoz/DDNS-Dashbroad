@@ -596,8 +596,7 @@ export default function SettingsPage() {
               <label className="block text-slate-400 font-medium mb-1">Example Cron / Curl Command</label>
               <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-slate-300 relative group">
                 <code>
-                  curl -X POST "{typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/api/agent/update" \
-                  {"\n"}  -H "Authorization: Bearer {generatedToken}"
+                  {`curl -X POST "${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/api/agent/update" \\\n  -H "Authorization: Bearer ${generatedToken}"`}
                 </code>
                 <button
                   onClick={() =>
