@@ -18,7 +18,64 @@ describe('PulseDNS Database Migration & Data Preservation', () => {
 
   it('safely upgrades an existing database containing legacy User and Session data without data loss', async () => {
     const upgradedDbFile = path.join(testDir, 'upgraded.db');
-    fs.copyFileSync(backupDbPath, upgradedDbFile);
+    if (fs.existsSync(backupDbPath)) {
+      fs.copyFileSync(backupDbPath, upgradedDbFile);
+    } else {
+      // Create representative pre-migration database with User, Session, Provider, and RemoteAgent
+      const tempPrisma = new PrismaClient({
+        datasources: { db: { url: `file:${upgradedDbFile}` } },
+      });
+      await tempPrisma.$executeRawUnsafe(`
+        CREATE TABLE "User" (
+          "id" TEXT NOT NULL PRIMARY KEY,
+          "username" TEXT NOT NULL,
+          "passwordHash" TEXT NOT NULL,
+          "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" DATETIME NOT NULL
+        );
+      `);
+      await tempPrisma.$executeRawUnsafe(`
+        CREATE TABLE "Session" (
+          "id" TEXT NOT NULL PRIMARY KEY,
+          "userId" TEXT NOT NULL,
+          "token" TEXT NOT NULL,
+          "expiresAt" DATETIME NOT NULL,
+          "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await tempPrisma.$executeRawUnsafe(`
+        CREATE TABLE "ProviderIntegration" (
+          "id" TEXT NOT NULL PRIMARY KEY,
+          "provider" TEXT NOT NULL,
+          "name" TEXT NOT NULL,
+          "encryptedCredentials" TEXT NOT NULL,
+          "iv" TEXT NOT NULL,
+          "tag" TEXT NOT NULL,
+          "status" TEXT NOT NULL DEFAULT 'CONNECTED',
+          "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" DATETIME NOT NULL
+        );
+      `);
+      await tempPrisma.$executeRawUnsafe(`
+        CREATE TABLE "RemoteAgent" (
+          "id" TEXT NOT NULL PRIMARY KEY,
+          "name" TEXT NOT NULL,
+          "tokenHash" TEXT NOT NULL,
+          "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" DATETIME NOT NULL
+        );
+      `);
+      await tempPrisma.$executeRawUnsafe(`
+        INSERT INTO "User" ("id", "username", "passwordHash", "updatedAt") VALUES ('u1', 'admin', 'hash123', CURRENT_TIMESTAMP);
+      `);
+      await tempPrisma.$executeRawUnsafe(`
+        INSERT INTO "Session" ("id", "userId", "token", "expiresAt") VALUES ('s1', 'u1', 'token123', CURRENT_TIMESTAMP);
+      `);
+      await tempPrisma.$executeRawUnsafe(`
+        INSERT INTO "RemoteAgent" ("id", "name", "tokenHash", "updatedAt") VALUES ('a1', 'agent-1', 'hash_a1', CURRENT_TIMESTAMP);
+      `);
+      await tempPrisma.$disconnect();
+    }
 
     // Verify pre-conditions
     const prePrisma = new PrismaClient({

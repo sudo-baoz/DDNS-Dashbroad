@@ -93,6 +93,7 @@ jobs:
           npx prisma generate
           node scripts/migrate.js
           node scripts/migrate.js status
+          ln -sf prisma/pulsedns.db pulsedns.db
 
       - name: Execute Vitest Suite
         run: npm run test:unit
@@ -129,6 +130,7 @@ jobs:
         run: |
           npx prisma generate
           node scripts/migrate.js
+          ln -sf prisma/pulsedns.db pulsedns.db
           npm run build
 
       - name: Run Playwright Tests
