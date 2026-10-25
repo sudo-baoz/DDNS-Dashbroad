@@ -92,7 +92,7 @@ jobs:
         run: |
           npx prisma generate
           node scripts/migrate.js
-          npx prisma migrate status
+          node scripts/migrate.js status
 
       - name: Execute Vitest Suite
         run: npm run test:unit

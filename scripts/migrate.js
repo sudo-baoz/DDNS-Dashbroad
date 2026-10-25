@@ -77,6 +77,17 @@ async function migrate() {
     }
   }
 
+  // If invoked with 'status', check migration status and exit
+  if (process.argv.includes('status')) {
+    console.log('>>> [PulseDNS Migration] Checking migration status with prisma migrate status...');
+    execSync('npx prisma migrate status', {
+      stdio: 'inherit',
+      env: { ...process.env, DATABASE_URL: effectiveDbUrl },
+    });
+    console.log('>>> [PulseDNS Migration] Migration status check completed.');
+    return;
+  }
+
   // Execute standard Prisma migrate deploy with resolved URL
   console.log('>>> [PulseDNS Migration] Applying pending migrations with prisma migrate deploy...');
   execSync('npx prisma migrate deploy', {

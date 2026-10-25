@@ -13,7 +13,7 @@
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "node scripts/migrate.js",
-    "db:status": "prisma migrate status",
+    "db:status": "node scripts/migrate.js status",
     "db:push": "prisma db push",
     "db:generate": "prisma generate"
   },
