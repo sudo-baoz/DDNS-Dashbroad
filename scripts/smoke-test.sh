@@ -104,6 +104,18 @@ else
   echo "WARNING: /api/auth/me returned HTTP ${AUTH_CODE}"
 fi
 
+# Verify /api/notifications/settings endpoint accessible
+NOTIF_CODE=$(curl -s -o /tmp/notif_settings.json -w "%{http_code}" "http://localhost:${HOST_PORT}/api/notifications/settings" || true)
+if [ "${NOTIF_CODE}" = "200" ]; then
+  echo ">>> /api/notifications/settings verified accessible (HTTP 200)"
+  cat /tmp/notif_settings.json
+  echo ""
+else
+  echo "ERROR: Notification settings API returned HTTP ${NOTIF_CODE}"
+  docker logs "${CONTAINER_NAME}"
+  exit 1
+fi
+
 # ------------------------------------------------------------------------------
 # TEST 2: Container Restart & Migration Idempotency
 # ------------------------------------------------------------------------------
