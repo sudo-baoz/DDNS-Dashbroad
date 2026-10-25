@@ -7,13 +7,13 @@ if [ -d "/app/data" ]; then
   chmod 775 /app/data 2>/dev/null || true
 fi
 
-# 2. Synchronize database schema if using SQLite
+# 2. Safely apply database migrations
 if [ -n "$DATABASE_URL" ]; then
-  echo ">>> [PulseDNS Entrypoint] Synchronizing database schema ($DATABASE_URL)..."
+  echo ">>> [PulseDNS Entrypoint] Running database migrations ($DATABASE_URL)..."
   if command -v su-exec >/dev/null 2>&1 && [ "$(id -u)" = "0" ]; then
-    su-exec node npx prisma db push --skip-generate
+    su-exec node node scripts/migrate.js
   else
-    npx prisma db push --skip-generate
+    node scripts/migrate.js
   fi
 fi
 
