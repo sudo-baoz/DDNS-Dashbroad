@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Run Trivy Vulnerability & Secret Scan (SARIF)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -32,7 +32,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Upload SARIF to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         continue-on-error: true
         with:
@@ -54,10 +54,10 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Lint Dockerfile with Hadolint
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.5.0
         with:
           dockerfile: Dockerfile
           failure-threshold: error
