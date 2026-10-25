@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "db:migrate": "node scripts/migrate.js",
+    "db:status": "node scripts/migrate.js status",
     "db:push": "prisma db push",
     "db:generate": "prisma generate"
   },

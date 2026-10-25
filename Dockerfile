@@ -1,7 +1,7 @@
 # PulseDNS Production Dockerfile
 FROM node:20-alpine AS base
 WORKDIR /app
-RUN apk add --no-cache libc6-compat openssl curl su-exec
+RUN apk add --no-cache libc6-compat openssl curl su-exec sqlite
 ENV DATABASE_URL="file:/app/data/pulsedns.db"
 
 # Stage 1: Dependencies
