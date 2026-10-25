@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { logAudit } from '@/lib/audit';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const [settings, zoneCount, recordCount, jobCount, executionCount] = await Promise.all([
     prisma.applicationSettings.upsert({

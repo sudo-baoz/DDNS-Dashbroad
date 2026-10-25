@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { generateRandomToken, hashToken } from '@/lib/crypto';
 import { logAudit } from '@/lib/audit';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
 
   const agents = await prisma.remoteAgent.findMany({

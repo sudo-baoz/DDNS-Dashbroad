@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getAllProvidersMetadata } from '@/lib/providers/factory';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
 
   const connectedProviders = await prisma.providerIntegration.findMany({

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { detectPublicIPv4, detectPublicIPv6 } from '@/lib/ip-detector';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
 
   const settings = await prisma.applicationSettings.findUnique({ where: { id: 'default' } });

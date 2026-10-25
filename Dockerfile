@@ -2,6 +2,7 @@
 FROM node:20-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl curl su-exec
+ENV DATABASE_URL="file:/app/data/pulsedns.db"
 
 # Stage 1: Dependencies
 FROM base AS deps
@@ -13,6 +14,7 @@ RUN npm ci
 # Stage 2: Builder
 FROM base AS builder
 WORKDIR /app
+ENV DATABASE_URL="file:/app/data/pulsedns.db"
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate && npm run build
