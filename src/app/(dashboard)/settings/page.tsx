@@ -38,10 +38,6 @@ export default function SettingsPage() {
   const [requestTimeoutSec, setRequestTimeoutSec] = useState(10);
   const [maxRetries, setMaxRetries] = useState(3);
 
-  // Password change state
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Agent Token Create Modal
   const [createAgentModal, setCreateAgentModal] = useState(false);
@@ -139,40 +135,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match.');
-      return;
-    }
-    if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters.');
-      return;
-    }
-
-    try {
-      const res = await fetch('/api/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          oldPassword,
-          newPassword,
-        }),
-      });
-
-      if (res.ok) {
-        toast.success('Administrator password changed successfully.');
-        setOldPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      } else {
-        const err = await res.json();
-        toast.error(err.error || 'Password update failed.');
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Password update failed.');
-    }
-  };
 
   const handleCreateAgent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,7 +205,7 @@ export default function SettingsPage() {
           { id: 'general', label: 'General', icon: Settings },
           { id: 'ddns', label: 'DDNS Engine', icon: Server },
           { id: 'agents', label: 'Remote Agents', icon: Radio },
-          { id: 'security', label: 'Security & Auth', icon: Shield },
+          { id: 'security', label: 'Homelab Security', icon: Shield },
           { id: 'system', label: 'System Health', icon: Activity },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -444,58 +406,63 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Tab: Security */}
+      {/* Tab: Homelab Security */}
       {activeTab === 'security' && (
-        <form onSubmit={handleChangePassword} className="max-w-xl space-y-4 p-6 rounded-2xl bg-[#0c1322] border border-slate-800">
-          <div>
-            <h3 className="text-sm font-bold text-white mb-1">Change Master Password</h3>
-            <p className="text-xs text-slate-400">Update your administrator password securely.</p>
-          </div>
-
-          <div className="pt-2 space-y-3">
+        <div className="max-w-3xl space-y-4">
+          <div className="p-6 rounded-2xl bg-[#0c1322] border border-slate-800 space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Current Password</label>
-              <input
-                type="password"
-                required
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-emerald-400" />
+                <h3 className="text-sm font-bold text-white">Homelab Network Security Model</h3>
+              </div>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                PulseDNS is architected for private, trusted environments with seamless single-instance operation. No user logins or password sessions are required.
+              </p>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">New Password (min 8 chars)</label>
-              <input
-                type="password"
-                required
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-xs">
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+                <div className="flex items-center gap-2 font-semibold text-white">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span>Access Boundary</span>
+                </div>
+                <p className="text-slate-400 text-[11px] leading-relaxed">
+                  Confine dashboard exposure to private LAN interfaces (RFC 1918), Tailscale/WireGuard VPN meshes, or an authenticated reverse proxy (e.g. Traefik, Caddy, Authelia).
+                </p>
+              </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Confirm New Password</label>
-              <input
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+                <div className="flex items-center gap-2 font-semibold text-white">
+                  <div className="w-2 h-2 rounded-full bg-cyan-400" />
+                  <span>Origin & CSRF Defense</span>
+                </div>
+                <p className="text-slate-400 text-[11px] leading-relaxed">
+                  Automatic Origin and Referer validation rejects cross-site state changes from untrusted foreign websites, defending against drive-by DNS rebinding.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+                <div className="flex items-center gap-2 font-semibold text-white">
+                  <div className="w-2 h-2 rounded-full bg-indigo-400" />
+                  <span>Credential Vault</span>
+                </div>
+                <p className="text-slate-400 text-[11px] leading-relaxed">
+                  Cloudflare API tokens remain strictly encrypted at rest via AES-256-GCM. Plaintext credentials are never transmitted to browser clients.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+                <div className="flex items-center gap-2 font-semibold text-white">
+                  <div className="w-2 h-2 rounded-full bg-amber-400" />
+                  <span>Remote Agent Protection</span>
+                </div>
+                <p className="text-slate-400 text-[11px] leading-relaxed">
+                  Remote IP reporting endpoints require unique, revocable SHA-256 hashed bearer tokens. Unauthenticated push updates are strictly rejected.
+                </p>
+              </div>
             </div>
           </div>
-
-          <div className="pt-4 border-t border-slate-800 flex justify-end">
-            <button
-              type="submit"
-              className="px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white"
-            >
-              Update Password
-            </button>
-          </div>
-        </form>
+        </div>
       )}
 
       {/* Tab: System Health */}

@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
 import { CloudflareAdapter } from '@/lib/providers/cloudflare';
 import { encryptText } from '@/lib/crypto';
 import { logAudit } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
-  const { errorResponse } = await requireAuth(req);
-  if (errorResponse) return errorResponse;
 
   try {
     const body = await req.json();

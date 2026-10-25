@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { detectPublicIPv4, detectPublicIPv6 } from '@/lib/ip-detector';
 
 export async function GET(req: NextRequest) {
-  const { errorResponse } = await requireAuth(req);
-  if (errorResponse) return errorResponse;
 
   const settings = await prisma.applicationSettings.findUnique({ where: { id: 'default' } });
   const ipv4Urls = settings?.ipv4SourceUrls

@@ -28,19 +28,7 @@ async function main() {
 
   const browser = await chromium.launch();
   const context = await browser.newContext();
-
-  // Log in first
   const page = await context.newPage();
-  await page.goto('http://localhost:3000/login');
-  await page.waitForTimeout(500);
-
-  // If on login page, fill credentials
-  if (page.url().includes('/login')) {
-    await page.fill('input[placeholder="admin"]', 'admin');
-    await page.fill('input[type="password"]', 'MasterPass123!');
-    await page.click('button:has-text("Sign In")');
-    await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
-  }
 
   // Iterate over viewports and pages
   for (const vp of VIEWPORTS) {
@@ -55,16 +43,6 @@ async function main() {
       console.log(`Saved screenshot: ${filename}`);
     }
   }
-
-  // Also capture Login page at desktop and mobile
-  await page.goto('http://localhost:3000/api/auth/logout', { method: 'POST' } as any);
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('http://localhost:3000/login');
-  await page.screenshot({ path: path.join(screenshotsDir, 'login_1440.png') });
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('http://localhost:3000/login');
-  await page.screenshot({ path: path.join(screenshotsDir, 'login_390.png') });
 
   await browser.close();
   console.log('All screenshots captured successfully!');

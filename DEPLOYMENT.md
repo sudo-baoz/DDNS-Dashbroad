@@ -25,12 +25,10 @@ cd /opt/pulsedns
 curl -sSL https://raw.githubusercontent.com/your-repo/DDNS-Dashbroad/main/docker-compose.yml -o docker-compose.yml
 curl -sSL https://raw.githubusercontent.com/your-repo/DDNS-Dashbroad/main/.env.example -o .env
 
-# 3. Generate secrets
-SESSION_SECRET=$(openssl rand -hex 32)
+# 3. Generate AES-256 encryption key for token vault
 ENCRYPTION_KEY=$(openssl rand -hex 32)
 
-# Set secrets in .env
-sed -i "s/replace-with-a-random-secure-string-at-least-32-chars-long/$SESSION_SECRET/" .env
+# Set encryption key in .env
 sed -i "s/replace-with-64-char-hex-key-generate-via-openssl-rand-hex-32/$ENCRYPTION_KEY/" .env
 
 # 4. Launch container

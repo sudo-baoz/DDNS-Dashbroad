@@ -60,7 +60,7 @@ export default function ActivityLogsPage() {
             Activity & Audit Logs
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Immutable audit record of IP updates, authentication events, and provider operations.
+            Immutable audit record of IP updates, DDNS jobs, and provider operations.
           </p>
         </div>
         <button
@@ -94,11 +94,11 @@ export default function ActivityLogsPage() {
             <option value="ALL">All Event Types</option>
             <option value="DNS_UPDATE">DNS Update</option>
             <option value="IP_CHANGE">IP Change</option>
-            <option value="AUTH_LOGIN">Login Event</option>
             <option value="PROVIDER_CONNECT">Provider Connect</option>
             <option value="PROVIDER_ERROR">Provider Error</option>
             <option value="JOB_EXECUTE">Job Execution</option>
             <option value="SETTINGS_UPDATE">Settings Update</option>
+            <option value="AGENT_TOKEN_CREATE">Agent Token Created</option>
           </select>
         </div>
 

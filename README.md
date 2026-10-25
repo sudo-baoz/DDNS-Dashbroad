@@ -21,7 +21,7 @@
 - **Dual Source Modes**:
   - **Mode 1 — Server Outbound IP**: Dashboard worker automatically detects its own public IPv4 and IPv6 via redundant fallback mirrors (`ipify`, `icanhazip`, `ifconfig.me`).
   - **Mode 2 — Remote Agent / Client**: Designed for VPS deployments. Home servers or routers securely report their local public IP via cryptographically hashed bearer tokens.
-- **Defense-in-Depth Security**: Provider tokens encrypted at rest with **AES-256-GCM**, passwords hashed with **bcrypt/Argon2**, HTTP-only SameSite session cookies, and zero token leakage in client responses.
+- **Homelab Security & Frictionless Access**: Designed for private trusted networks (LAN / Tailscale / Reverse Proxy) with instant dashboard access—no login or registration required. Provider tokens remain strictly encrypted at rest with **AES-256-GCM**, remote agent reporting is cryptographically authenticated with SHA-256 tokens, and state changes are guarded with Origin & CSRF validation.
 - **Provider Plugin Architecture**: Clean adapter layer with Cloudflare DNS fully operational, and DuckDNS, No-IP, Dynu, Namecheap, Google Cloud DNS, AWS Route 53, and Custom Webhook adapters staged for future releases.
 - **Comprehensive Observability**: Real-time IP telemetry, Recharts update activity latency graphs, structured audit logging, and Docker container healthchecks (`/api/health`).
 
@@ -50,21 +50,20 @@ npx prisma db push
 npm run dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000) to initialize your master administrator account.
+Visit [http://localhost:3000](http://localhost:3000) to immediately access your Operational Overview dashboard.
 
 ---
 
 ## Production Docker Deployment
 
-Deploying PulseDNS in a homelab or VPS with Docker Compose takes seconds:
+Deploying PulseDNS in a homelab or private server with Docker Compose takes seconds:
 
 ```bash
 # 1. Clone repository and copy template
 cp .env.example .env
 
-# 2. Edit .env and generate secure secrets:
+# 2. Edit .env and set your 32-byte hex encryption key:
 # openssl rand -hex 32
-SESSION_SECRET="your-generated-session-secret-here"
 ENCRYPTION_KEY="your-generated-64-character-hex-encryption-key"
 
 # 3. Launch with Docker Compose
@@ -83,7 +82,7 @@ Persistent SQLite data is safely stored in `./data/pulsedns.db`.
 </p>
 <p align="center">
   <img src="screenshots/settings_1440px.png" alt="Settings & Remote Agents" width="410" />
-  <img src="screenshots/login_1440px.png" alt="Sleek Authentication Screen" width="410" />
+  <img src="screenshots/records_1440px.png" alt="DNS Records Management" width="410" />
 </p>
 
 ---

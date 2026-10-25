@@ -1,10 +1,6 @@
 import prisma from './prisma';
 
 export type AuditAction =
-  | 'AUTH_SETUP'
-  | 'AUTH_LOGIN'
-  | 'AUTH_LOGOUT'
-  | 'AUTH_PASSWORD_CHANGE'
   | 'PROVIDER_CONNECT'
   | 'PROVIDER_DISCONNECT'
   | 'PROVIDER_ERROR'
