@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
 import { generateRandomToken, hashToken } from '@/lib/crypto';
 import { logAudit } from '@/lib/audit';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
-  const { errorResponse } = await requireAuth(req);
-  if (errorResponse) return errorResponse;
 
   const agents = await prisma.remoteAgent.findMany({
     select: {
@@ -28,8 +27,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { errorResponse } = await requireAuth(req);
-  if (errorResponse) return errorResponse;
 
   try {
     const body = await req.json();
@@ -74,8 +71,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { errorResponse } = await requireAuth(req);
-  if (errorResponse) return errorResponse;
 
   try {
     const url = new URL(req.url);

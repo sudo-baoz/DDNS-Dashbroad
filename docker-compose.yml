@@ -8,15 +8,18 @@ services:
     container_name: pulsedns
     restart: unless-stopped
     ports:
-      - "${PORT:-3000}:3000"
+      # Homelab security recommendation: Bind to localhost (127.0.0.1) or trusted private LAN
+      # Set HOST_BIND=127.0.0.1 in .env for local/reverse-proxy only access
+      - "${HOST_BIND:-0.0.0.0}:${PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=file:/app/data/pulsedns.db
-      - SESSION_SECRET=${SESSION_SECRET}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - ENABLE_WORKER=true
+      - TRUSTED_ORIGINS=${TRUSTED_ORIGINS:-}
     volumes:
+      # Persistent SQLite database and WAL files
       - ./data:/app/data
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]

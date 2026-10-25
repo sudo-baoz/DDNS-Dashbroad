@@ -7,6 +7,7 @@ on:
       - 'releases/**'
       - 'feat/**'
       - 'fix/**'
+      - 'ci/**'
     tags:
       - 'v*.*.*'
       - 'v*'
@@ -69,7 +70,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      SESSION_SECRET: 'ci-testing-session-secret-random-32chars-minimum-ok'
       ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
       DATABASE_URL: 'file:./prisma/pulsedns.db'
       PORT: '3000'
@@ -104,7 +104,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      SESSION_SECRET: 'ci-testing-session-secret-random-32chars-minimum-ok'
       ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
       DATABASE_URL: 'file:./prisma/pulsedns.db'
       PORT: '3000'

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Layers,
@@ -21,7 +21,9 @@ import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/ToastProvider';
 
-export default function RecordsPage() {
+export const dynamic = 'force-dynamic';
+
+function RecordsPageContent() {
   const searchParams = useSearchParams();
   const initialZoneId = searchParams.get('zoneId') || '';
 
@@ -510,5 +512,13 @@ export default function RecordsPage() {
         </div>
       </ConfirmDialog>
     </div>
+  );
+}
+
+export default function RecordsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-xs text-slate-400">Loading DNS records...</div>}>
+      <RecordsPageContent />
+    </Suspense>
   );
 }

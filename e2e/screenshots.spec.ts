@@ -29,15 +29,6 @@ test('Capture responsive screenshots across all viewports', async ({ browser }) 
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  // Login
-  await page.goto('http://localhost:3000/login');
-  if (page.url().includes('/login')) {
-    await page.fill('input[placeholder="admin"]', 'admin');
-    await page.fill('input[type="password"]', 'MasterPass123!');
-    await page.click('button:has-text("Sign In")');
-    await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
-  }
-
   for (const vp of VIEWPORTS) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
     for (const p of PAGES) {
@@ -54,15 +45,4 @@ test('Capture responsive screenshots across all viewports', async ({ browser }) 
       });
     }
   }
-
-  // Also capture Login page at 1440 and 390
-  const unauthContext = await browser.newContext();
-  const unauthPage = await unauthContext.newPage();
-  await unauthPage.setViewportSize({ width: 1440, height: 900 });
-  await unauthPage.goto('http://localhost:3000/login');
-  await unauthPage.screenshot({ path: path.join(screenshotsDir, 'login_1440px.png') });
-
-  await unauthPage.setViewportSize({ width: 390, height: 844 });
-  await unauthPage.goto('http://localhost:3000/login');
-  await unauthPage.screenshot({ path: path.join(screenshotsDir, 'login_390px.png') });
 });

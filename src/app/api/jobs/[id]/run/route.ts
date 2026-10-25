@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
 import { executeDDNSJob } from '@/lib/ddns-engine';
 import { logAudit } from '@/lib/audit';
 
@@ -7,8 +6,6 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { errorResponse } = await requireAuth(req);
-  if (errorResponse) return errorResponse;
 
   try {
     const result = await executeDDNSJob(params.id, { force: true });

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Globe,
@@ -11,21 +11,25 @@ import {
   Activity,
   Boxes,
   Settings,
-  LogOut,
   Radio,
-  ExternalLink,
+  ShieldCheck,
+  Server,
 } from 'lucide-react';
 
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
-  username?: string;
+  instanceName?: string;
   workerActive?: boolean;
 }
 
-export function Sidebar({ isOpen = false, onClose, username = 'Admin', workerActive = true }: SidebarProps) {
+export function Sidebar({
+  isOpen = false,
+  onClose,
+  instanceName = 'Homelab',
+  workerActive = true,
+}: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
 
   const navItems = [
     { label: 'Overview', href: '/', icon: LayoutDashboard },
@@ -36,15 +40,6 @@ export function Sidebar({ isOpen = false, onClose, username = 'Admin', workerAct
     { label: 'Integrations', href: '/integrations', icon: Boxes },
     { label: 'Settings', href: '/settings', icon: Settings },
   ];
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/login');
-    } catch {
-      router.push('/login');
-    }
-  };
 
   return (
     <>
@@ -112,7 +107,7 @@ export function Sidebar({ isOpen = false, onClose, username = 'Admin', workerAct
           </nav>
         </div>
 
-        {/* Worker Status & Profile Footer */}
+        {/* Worker Status & Homelab Instance Footer */}
         <div className="p-3 border-t border-slate-800 space-y-2">
           {/* Worker Status Capsule */}
           <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-slate-800/40 border border-slate-800 text-xs">
@@ -142,24 +137,27 @@ export function Sidebar({ isOpen = false, onClose, username = 'Admin', workerAct
             </span>
           </div>
 
-          {/* User Profile Bar */}
-          <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-slate-800/20 hover:bg-slate-800/50 transition-colors">
+          {/* Homelab Instance Status Card */}
+          <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-slate-800/20 border border-slate-800/60 hover:bg-slate-800/40 transition-colors">
             <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-500/30">
-                {username.charAt(0).toUpperCase()}
+              <div className="w-7 h-7 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-500/30">
+                <Server className="w-3.5 h-3.5 text-indigo-400" />
               </div>
               <div className="truncate">
-                <div className="text-xs font-semibold text-slate-200 truncate">{username}</div>
-                <div className="text-[10px] text-slate-400">Administrator</div>
+                <div className="text-xs font-semibold text-slate-200 truncate">{instanceName} Mode</div>
+                <div className="text-[10px] text-emerald-400 flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Trusted Network</span>
+                </div>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              title="Logout"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+            <Link
+              href="/settings"
+              title="System Settings"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-800 transition-colors"
             >
-              <LogOut className="w-4 h-4" />
-            </button>
+              <Settings className="w-4 h-4" />
+            </Link>
           </div>
         </div>
       </aside>

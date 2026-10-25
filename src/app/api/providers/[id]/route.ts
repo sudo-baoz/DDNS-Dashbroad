@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
 import { decryptText } from '@/lib/crypto';
 import { getProviderAdapter } from '@/lib/providers/factory';
 import { logAudit } from '@/lib/audit';
@@ -9,8 +8,6 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { errorResponse } = await requireAuth(req);
-  if (errorResponse) return errorResponse;
 
   const provider = await prisma.providerIntegration.findUnique({
     where: { id: params.id },
@@ -38,8 +35,6 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { errorResponse } = await requireAuth(req);
-  if (errorResponse) return errorResponse;
 
   const provider = await prisma.providerIntegration.findUnique({
     where: { id: params.id },

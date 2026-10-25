@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
 import { decryptText } from '@/lib/crypto';
 import { getProviderAdapter } from '@/lib/providers/factory';
 import { logAudit } from '@/lib/audit';
 
 export async function GET(req: NextRequest) {
-  const { errorResponse } = await requireAuth(req);
-  if (errorResponse) return errorResponse;
-
   const url = new URL(req.url);
   const search = url.searchParams.get('search') || '';
 
@@ -42,8 +38,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { errorResponse } = await requireAuth(req);
-  if (errorResponse) return errorResponse;
 
   try {
     const providers = await prisma.providerIntegration.findMany({

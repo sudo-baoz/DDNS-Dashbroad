@@ -2,6 +2,8 @@
 
 This guide covers deploying PulseDNS using the pre-built, verified multi-architecture Docker images published to **GitHub Container Registry (GHCR)**.
 
+> **Homelab Security Architecture**: PulseDNS is designed as a single-instance, trusted-network dashboard. No user login or registration is required. Deploy within a private LAN (RFC 1918), Tailscale / WireGuard VPN mesh, or behind an authenticated reverse proxy (e.g., Traefik, Caddy, Authelia). Do not bind the unauthenticated dashboard directly to a public IP without network-level access control.
+
 ---
 
 ## 1. Quick Start with Docker Run
@@ -12,28 +14,27 @@ Run the verified production image directly:
 # 1. Create a persistent data directory for SQLite
 mkdir -p ./pulsedns-data
 
-# 2. Run the container
+# 2. Run the container (binding to 127.0.0.1 for local/reverse-proxy access)
 docker run -d \
   --name pulsedns \
   --restart unless-stopped \
-  -p 3000:3000 \
+  -p 127.0.0.1:3000:3000 \
   -v "$(pwd)/pulsedns-data:/app/data" \
   -e NODE_ENV="production" \
   -e PORT="3000" \
   -e DATABASE_URL="file:/app/data/pulsedns.db" \
-  -e SESSION_SECRET="$(openssl rand -hex 32)" \
   -e ENCRYPTION_KEY="$(openssl rand -hex 32)" \
   -e ENABLE_WORKER="true" \
   ghcr.io/sudo-baoz/ddns-dashbroad:latest
 ```
 
-Open your browser at `http://localhost:3000` to complete the initial setup wizard.
+Open your browser at `http://localhost:3000` to immediately view your Operational Overview. No login or account creation required.
 
 ---
 
 ## 2. Production Deployment with Docker Compose
 
-For homelabs, VPS instances, or production servers, using `docker-compose.yml` is the recommended standard.
+For homelabs, home servers, or private infrastructure, using `docker-compose.yml` is the recommended standard.
 
 ### 2.1 Prepare `docker-compose.yml`
 
@@ -46,14 +47,15 @@ services:
     container_name: pulsedns
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # Bind to localhost (127.0.0.1) or your private LAN interface
+      - "${HOST_BIND:-127.0.0.1}:${PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=file:/app/data/pulsedns.db
-      - SESSION_SECRET=${SESSION_SECRET}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - ENABLE_WORKER=true
+      - TRUSTED_ORIGINS=${TRUSTED_ORIGINS:-}
     volumes:
       - pulsedns_data:/app/data
     healthcheck:
@@ -70,16 +72,18 @@ volumes:
 
 ### 2.2 Create `.env`
 
-Generate secure keys for cookie signing and provider token encryption:
+Generate an AES-256 encryption key for secure storage of your Cloudflare tokens:
 
 ```bash
-# Generate secrets
-SESSION_SECRET=$(openssl rand -hex 32)
+# Generate 32-byte (64 hex characters) encryption key
 ENCRYPTION_KEY=$(openssl rand -hex 32)
 
 cat <<EOF > .env
-SESSION_SECRET=${SESSION_SECRET}
 ENCRYPTION_KEY=${ENCRYPTION_KEY}
+PORT=3000
+HOST_BIND=127.0.0.1
+# Optional: Comma-separated list of trusted hostnames or reverse-proxy URLs
+# TRUSTED_ORIGINS="http://192.168.1.50:3000,http://pulsedns.home.arpa"
 EOF
 
 # Restrict file permissions
@@ -100,15 +104,17 @@ docker compose logs -f pulsedns
 docker compose ps
 ```
 
+The container entrypoint automatically adjusts volume permissions on `/app/data` and drops privileges to user `node` (UID 1000) for least-privilege runtime security.
+
 ---
 
-## 3. Reverse Proxy & SSL Setup
+## 3. Reverse Proxy & Network Access
 
-It is strongly recommended to place PulseDNS behind a reverse proxy for HTTPS termination.
+Place PulseDNS behind a reverse proxy for TLS encryption and access control.
 
 ### Caddy Example
 ```caddy
-ddns.yourdomain.com {
+ddns.homelab.lan {
     reverse_proxy localhost:3000
 }
 ```
@@ -117,16 +123,16 @@ ddns.yourdomain.com {
 ```nginx
 server {
     listen 80;
-    server_name ddns.yourdomain.com;
+    server_name ddns.homelab.lan;
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name ddns.yourdomain.com;
+    server_name ddns.homelab.lan;
 
-    ssl_certificate /etc/letsencrypt/live/ddns.yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/ddns.yourdomain.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/ddns.homelab.lan/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/ddns.homelab.lan/privkey.pem;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -150,23 +156,11 @@ To update your running installation:
 # 1. Pull the newest image
 docker compose pull
 
-# 2. Recreate container with zero downtime
+# 2. Recreate container
 docker compose up -d --remove-orphans
 
 # 3. Clean up older unused image layers
 docker image prune -f
-```
-
-### Automated Updates with Watchtower
-If you use Watchtower to keep containers updated automatically:
-
-```yaml
-  watchtower:
-    image: containrrr/watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 3600 --cleanup pulsedns
-    restart: unless-stopped
 ```
 
 ---
@@ -175,17 +169,17 @@ If you use Watchtower to keep containers updated automatically:
 
 PulseDNS stores all configuration, encrypted provider tokens, DNS zones, and sync history in a single SQLite database file:
 
-- **Location**: `/app/data/pulsedns.db` (or `./pulsedns-data/pulsedns.db` on host).
+- **Location**: `/app/data/pulsedns.db` (or volume `pulsedns_data`).
 
 ### Backup:
 ```bash
-# Use sqlite3 online backup command to guarantee safe atomic backup
-sqlite3 ./pulsedns-data/pulsedns.db ".backup ./pulsedns_backup_$(date +%Y%m%d_%H%M%S).db"
+# Safe atomic SQLite backup
+docker compose exec pulsedns sqlite3 /app/data/pulsedns.db ".backup /app/data/pulsedns_backup.db"
 ```
 
 ### Restore:
 ```bash
 docker compose down
-cp ./pulsedns_backup_XXXX.db ./pulsedns-data/pulsedns.db
+cp ./pulsedns_backup.db ./pulsedns-data/pulsedns.db
 docker compose up -d
 ```

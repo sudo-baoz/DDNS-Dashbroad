@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 
 export async function GET(req: NextRequest) {
-  const { errorResponse } = await requireAuth(req);
-  if (errorResponse) return errorResponse;
-
   const jobs = await prisma.ddnsJob.findMany({
     include: {
       record: {
@@ -35,8 +31,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { errorResponse } = await requireAuth(req);
-  if (errorResponse) return errorResponse;
 
   try {
     const body = await req.json();

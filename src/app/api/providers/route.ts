@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
 import { getAllProvidersMetadata } from '@/lib/providers/factory';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
-  const { errorResponse } = await requireAuth(req);
-  if (errorResponse) return errorResponse;
 
   const connectedProviders = await prisma.providerIntegration.findMany({
     select: {
