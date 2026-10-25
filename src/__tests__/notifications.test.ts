@@ -176,6 +176,16 @@ describe('Notifications Subsystem: Anti-Spam, Cooldown & Outage State Machine', 
     notifySystemStartup: false,
   };
 
+  beforeEach(async () => {
+    await prisma.notificationState.deleteMany({
+      where: {
+        key: {
+          contains: 'test-',
+        },
+      },
+    });
+  });
+
   it('suppresses notifications when integration is disabled', async () => {
     const decision = await evaluateAntiSpam(
       {

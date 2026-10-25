@@ -76,6 +76,9 @@ test.describe('PulseDNS Discord Webhook Notifications Suite', () => {
       await enableToggle.click();
     }
 
+    // Set Bot Name
+    await botNameInput.fill('Homelab Monitor');
+
     // Save Configuration
     const saveBtn = page.getByRole('button', { name: 'Save Configuration' });
     await saveBtn.click();

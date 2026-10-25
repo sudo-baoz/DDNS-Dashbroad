@@ -234,10 +234,19 @@ export function DiscordConfigForm({ onConfigChange }: DiscordConfigFormProps) {
       const data = await res.json();
       if (res.ok && data.success) {
         toast.success('Test message delivered successfully to Discord!');
-        loadSettings();
+        setSettings((prev: any) => ({
+          ...prev,
+          deliveryStatus: 'CONNECTED',
+          lastDeliveryError: null,
+          lastDeliveryAt: new Date().toISOString(),
+        }));
       } else {
         toast.error(data.error || 'Webhook test failed.');
-        loadSettings();
+        setSettings((prev: any) => ({
+          ...prev,
+          deliveryStatus: data.statusCode === 429 ? 'RATE_LIMITED' : data.isPermanentFailure ? 'INVALID_WEBHOOK' : 'DELIVERY_FAILED',
+          lastDeliveryError: data.error || 'Webhook test failed.',
+        }));
       }
     } catch (err: any) {
       toast.error(err.message || 'Error testing webhook.');
