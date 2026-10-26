@@ -18,6 +18,7 @@ const PAGES = [
   { name: 'integrations', path: '/integrations' },
   { name: 'activity', path: '/activity' },
   { name: 'settings', path: '/settings' },
+  { name: 'settings_notifications', path: '/settings?tab=notifications' },
 ];
 
 async function main() {

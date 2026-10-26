@@ -128,7 +128,12 @@ describe('PulseDNS Database Migration & Data Preservation', () => {
     const migrations: any[] = await postPrisma.$queryRawUnsafe(
       'SELECT migration_name FROM _prisma_migrations'
     );
-    expect(migrations.length).toBe(2);
+    expect(migrations.length).toBeGreaterThanOrEqual(2);
+
+    // Notification tables must also exist
+    expect(tableNames.has('NotificationSetting')).toBe(true);
+    expect(tableNames.has('NotificationDelivery')).toBe(true);
+    expect(tableNames.has('NotificationState')).toBe(true);
 
     await postPrisma.$disconnect();
 
@@ -170,6 +175,9 @@ describe('PulseDNS Database Migration & Data Preservation', () => {
     expect(tableNames.has('IpHistory')).toBe(true);
     expect(tableNames.has('AuditLog')).toBe(true);
     expect(tableNames.has('ApplicationSettings')).toBe(true);
+    expect(tableNames.has('NotificationSetting')).toBe(true);
+    expect(tableNames.has('NotificationDelivery')).toBe(true);
+    expect(tableNames.has('NotificationState')).toBe(true);
     expect(tableNames.has('_prisma_migrations')).toBe(true);
 
     // Auth tables must not exist

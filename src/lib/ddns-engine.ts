@@ -3,6 +3,7 @@ import { decryptText } from './crypto';
 import { getProviderAdapter } from './providers/factory';
 import { detectPublicIPv4, detectPublicIPv6, isValidIPv4, isValidIPv6 } from './ip-detector';
 import { logAudit } from './audit';
+import { notificationService, sanitizeLogMessage } from './notifications';
 
 // Concurrency lock: set of active job IDs currently executing
 const activeJobLocks = new Set<string>();
@@ -14,6 +15,44 @@ export interface JobExecutionResult {
   previousIp?: string;
   message: string;
   durationMs: number;
+}
+
+function classifyErrorCategory(msg: string): string {
+  const lower = msg.toLowerCase();
+  if (lower.includes('token') || lower.includes('auth') || lower.includes('401') || lower.includes('403')) {
+    return 'Authentication Failure';
+  }
+  if (lower.includes('429') || lower.includes('rate limit')) {
+    return 'Rate Limited';
+  }
+  if (lower.includes('timeout') || lower.includes('abort') || lower.includes('etimedout')) {
+    return 'Network Timeout';
+  }
+  if (lower.includes('permission') || lower.includes('forbidden')) {
+    return 'Missing DNS Permissions';
+  }
+  if (lower.includes('detect') || lower.includes('ipv4') || lower.includes('ipv6')) {
+    return 'IP Detection Failure';
+  }
+  if (lower.includes('not found') || lower.includes('record')) {
+    return 'Invalid DNS Record';
+  }
+  return 'Provider API Error';
+}
+
+function isProviderConnectionError(msg: string): boolean {
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes('etimedout') ||
+    lower.includes('econnrefused') ||
+    lower.includes('enotfound') ||
+    lower.includes('timeout') ||
+    lower.includes('502') ||
+    lower.includes('503') ||
+    lower.includes('504') ||
+    lower.includes('cloudflare api failure') ||
+    lower.includes('network')
+  );
 }
 
 /**
@@ -119,6 +158,7 @@ export async function executeDDNSJob(
     const isIpUnchanged = currentRecordContent.trim().toLowerCase() === detectedIp.trim().toLowerCase();
 
     // 3. If identical, record NO_CHANGE and skip calling provider API
+    // (Never send notifications on unchanged IP during routine checks)
     if (isIpUnchanged && !options.force) {
       const durationMs = Date.now() - startTime;
       const nextRun = new Date(Date.now() + job.intervalSeconds * 1000);
@@ -161,7 +201,23 @@ export async function executeDDNSJob(
       };
     }
 
-    // 4. IP changed: Decrypt credentials & call Provider Adapter
+    // 4. IP changed: Notify Public IP Changed Event first
+    notificationService.dispatch({
+      type: 'PUBLIC_IP_CHANGED',
+      severity: 'INFO',
+      title: '🌐 Public IP Changed',
+      description: `Public IP address changed for ${job.record.name}`,
+      domain: job.record.name,
+      jobId: job.id,
+      jobName: job.name,
+      recordType: job.record.type,
+      previousIp: currentRecordContent,
+      newIp: detectedIp,
+      detectionSource: detectionSource,
+      timestamp: new Date(),
+    }).catch(() => {});
+
+    // Decrypt credentials & call Provider Adapter
     const provider = job.record.provider;
     const credentials = JSON.parse(
       decryptText(provider.encryptedCredentials, provider.iv, provider.tag)
@@ -237,6 +293,33 @@ export async function executeDDNSJob(
       },
     });
 
+    // Dispatch DNS_UPDATE_SUCCESS notification
+    notificationService.dispatch({
+      type: 'DNS_UPDATE_SUCCESS',
+      severity: 'SUCCESS',
+      title: '✅ DNS Update Succeeded',
+      description: `Cloudflare DNS record updated to ${detectedIp}`,
+      domain: job.record.name,
+      jobId: job.id,
+      jobName: job.name,
+      recordType: job.record.type,
+      previousIp: currentRecordContent,
+      newIp: detectedIp,
+      provider: provider.provider,
+      latencyMs: durationMs,
+      timestamp: new Date(),
+    }).catch(() => {});
+
+    // If Cloudflare connection was previously down, dispatch recovery
+    notificationService.dispatch({
+      type: 'PROVIDER_CONNECTION_RECOVERED',
+      severity: 'SUCCESS',
+      title: '🔄 Cloudflare Connection Recovered',
+      description: 'Connection to Cloudflare has been restored.',
+      provider: provider.provider,
+      timestamp: new Date(),
+    }).catch(() => {});
+
     return {
       jobId: job.id,
       status: 'SUCCESS',
@@ -251,7 +334,11 @@ export async function executeDDNSJob(
 
     // Persist failure state
     try {
-      const job = await prisma.ddnsJob.findUnique({ where: { id: jobId } });
+      const job = await prisma.ddnsJob.findUnique({
+        where: { id: jobId },
+        include: { record: true },
+      });
+
       if (job) {
         // Calculate retry backoff (e.g. interval or exponential backoff)
         const nextRetry = new Date(Date.now() + Math.min(job.intervalSeconds, 60) * 1000);
@@ -286,6 +373,34 @@ export async function executeDDNSJob(
             error: errorMsg,
           },
         });
+
+        // Dispatch DNS_UPDATE_FAILED notification (sanitized of sensitive tokens)
+        notificationService.dispatch({
+          type: 'DNS_UPDATE_FAILED',
+          severity: 'ERROR',
+          title: '❌ DNS Update Failed',
+          description: `Failed DDNS update for ${job.record?.name || job.name}`,
+          domain: job.record?.name,
+          jobId: job.id,
+          jobName: job.name,
+          recordType: job.record?.type,
+          errorMessage: sanitizeLogMessage(errorMsg),
+          errorCategory: classifyErrorCategory(errorMsg),
+          timestamp: new Date(),
+        }).catch(() => {});
+
+        // If provider connection / network failed, dispatch PROVIDER_CONNECTION_LOST
+        if (isProviderConnectionError(errorMsg)) {
+          notificationService.dispatch({
+            type: 'PROVIDER_CONNECTION_LOST',
+            severity: 'ERROR',
+            title: '⚠️ Cloudflare Connection Lost',
+            description: 'Cloudflare connection lost or failing.',
+            provider: 'Cloudflare',
+            errorMessage: sanitizeLogMessage(errorMsg),
+            timestamp: new Date(),
+          }).catch(() => {});
+        }
       }
     } catch (saveErr) {
       console.error('Failed to log job failure:', saveErr);

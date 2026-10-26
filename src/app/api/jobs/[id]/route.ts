@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { logAudit } from '@/lib/audit';
+import { notificationService } from '@/lib/notifications';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-
   const job = await prisma.ddnsJob.findUnique({
     where: { id: params.id },
     include: {
@@ -35,10 +35,18 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-
   try {
     const body = await req.json();
     const { name, enabled, intervalSeconds, sourceMode, remoteAgentId, ipVersion } = body;
+
+    const currentJob = await prisma.ddnsJob.findUnique({
+      where: { id: params.id },
+      include: { record: true },
+    });
+
+    if (!currentJob) {
+      return NextResponse.json({ error: 'Job not found.' }, { status: 404 });
+    }
 
     const updateData: any = {};
     if (name) updateData.name = name.trim();
@@ -62,6 +70,23 @@ export async function PATCH(
       metadata: { jobId: job.id },
     });
 
+    // If job enabled status changed, dispatch JOB_STATUS_CHANGED notification
+    if (typeof enabled === 'boolean' && enabled !== currentJob.enabled) {
+      notificationService.dispatch({
+        type: 'JOB_STATUS_CHANGED',
+        severity: enabled ? 'INFO' : 'WARN',
+        title: '⚙️ DDNS Job Status Changed',
+        description: `DDNS Job "${job.name}" has been ${enabled ? 'enabled / resumed' : 'paused / disabled'}.`,
+        domain: currentJob.record?.name,
+        jobId: job.id,
+        jobName: job.name,
+        metadata: {
+          status: enabled ? 'ACTIVE' : 'PAUSED',
+        },
+        timestamp: new Date(),
+      }).catch(() => {});
+    }
+
     return NextResponse.json({ success: true, job });
   } catch (err: any) {
     return NextResponse.json(
@@ -75,7 +100,6 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-
   try {
     const job = await prisma.ddnsJob.findUnique({
       where: { id: params.id },

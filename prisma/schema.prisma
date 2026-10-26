@@ -134,3 +134,69 @@ model ApplicationSettings {
   workerHeartbeat    DateTime?
   updatedAt          DateTime  @updatedAt
 }
+
+model NotificationSetting {
+  id                        String    @id @default("default")
+  enabled                   Boolean   @default(false)
+  provider                  String    @default("discord")
+  encryptedWebhookUrl       String?
+  webhookIv                 String?
+  webhookTag                String?
+  botName                   String    @default("PulseDNS")
+  avatarUrl                 String?
+  minSeverity               String    @default("INFO")
+  cooldownSeconds           Int       @default(60)
+  errorThreshold            Int       @default(1)
+  includeIpAddresses        Boolean   @default(true)
+  timezone                  String    @default("Asia/Ho_Chi_Minh")
+  quietHoursEnabled         Boolean   @default(false)
+  quietHoursStart           String?
+  quietHoursEnd             String?
+  periodicSummaryEnabled    Boolean   @default(false)
+  periodicSummarySchedule   String    @default("daily")
+  lastSummaryAt             DateTime?
+  notifyIpChange            Boolean   @default(true)
+  notifyDnsSuccess          Boolean   @default(true)
+  notifyDnsFailure          Boolean   @default(true)
+  notifyConnectionLost      Boolean   @default(true)
+  notifyConnectionRecovered Boolean   @default(true)
+  notifyJobStatus           Boolean   @default(true)
+  notifyAgentStatus         Boolean   @default(true)
+  notifySystemStartup       Boolean   @default(false)
+  status                    String    @default("NOT_CONFIGURED")
+  statusMessage             String?
+  lastTestedAt              DateTime?
+  lastDeliveredAt           DateTime?
+  lastFailedAt              DateTime?
+  updatedAt                 DateTime  @updatedAt
+}
+
+model NotificationDelivery {
+  id             String    @id @default(cuid())
+  eventType      String
+  severity       String    @default("INFO")
+  title          String
+  description    String
+  payloadJson    String
+  domain         String?
+  status         String    @default("PENDING")
+  attemptCount   Int       @default(0)
+  maxAttempts    Int       @default(5)
+  nextAttemptAt  DateTime  @default(now())
+  lastError      String?
+  responseCode   Int?
+  sentAt         DateTime?
+  idempotencyKey String?   @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model NotificationState {
+  key            String    @id
+  state          String
+  lastNotifiedAt DateTime  @default(now())
+  failureCount   Int       @default(0)
+  metadata       String?
+  updatedAt      DateTime  @updatedAt
+}
+

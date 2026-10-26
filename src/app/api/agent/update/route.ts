@@ -4,6 +4,7 @@ import { hashToken } from '@/lib/crypto';
 import { isValidIPv4, isValidIPv6 } from '@/lib/ip-detector';
 import { executeDDNSJob } from '@/lib/ddns-engine';
 import { logAudit } from '@/lib/audit';
+import { notificationService } from '@/lib/notifications';
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,6 +66,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const previousIp = agent.lastReportedIp;
+    const isNewIp = previousIp !== reportedIp;
+
     // 3. Update agent status
     await prisma.remoteAgent.update({
       where: { id: agent.id },
@@ -99,6 +103,23 @@ export async function POST(req: NextRequest) {
         jobsTriggered: boundJobs.length,
       },
     });
+
+    // Dispatch AGENT_STATUS_CHANGED if IP changed
+    if (isNewIp) {
+      notificationService.dispatch({
+        type: 'AGENT_STATUS_CHANGED',
+        severity: 'INFO',
+        title: '🟢 Remote Agent Reported New IP',
+        description: `Remote agent "${agent.name}" reported updated IP ${reportedIp}.`,
+        previousIp: previousIp || undefined,
+        newIp: reportedIp,
+        metadata: {
+          agentName: agent.name,
+          agentId: agent.id,
+        },
+        timestamp: new Date(),
+      }).catch(() => {});
+    }
 
     return NextResponse.json({
       success: true,

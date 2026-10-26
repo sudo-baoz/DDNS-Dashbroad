@@ -134,7 +134,7 @@ jobs:
           npm run build
 
       - name: Run Playwright Tests
-        run: npx playwright test e2e/pulsedns.spec.ts e2e/modals-and-forms.spec.ts
+        run: npx playwright test e2e/pulsedns.spec.ts e2e/modals-and-forms.spec.ts e2e/notifications.spec.ts
 
       - name: Upload Test Artifacts on Failure
         if: failure()

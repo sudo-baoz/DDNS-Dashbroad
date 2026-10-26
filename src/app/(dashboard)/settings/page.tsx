@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Settings,
   Shield,
@@ -17,13 +18,25 @@ import {
   Activity,
   Database,
   Cpu,
+  Bell,
 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/ToastProvider';
+import { DiscordConfigForm } from '@/components/notifications/DiscordConfigForm';
+import { DiscordEmbedPreview } from '@/components/notifications/DiscordEmbedPreview';
+import { NotificationHistoryTable } from '@/components/notifications/NotificationHistoryTable';
 
-export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'general' | 'ddns' | 'agents' | 'security' | 'system'>('general');
+export const dynamic = 'force-dynamic';
+
+function SettingsPageContent() {
+  const [activeTab, setActiveTab] = useState<'general' | 'ddns' | 'agents' | 'notifications' | 'security' | 'system'>('general');
+  const [previewConfig, setPreviewConfig] = useState({
+    botName: 'PulseDNS',
+    avatarUrl: '',
+    timezone: 'Asia/Ho_Chi_Minh',
+    includeIpAddresses: true,
+  });
   const [settings, setSettings] = useState<any>({});
   const [system, setSystem] = useState<any>({});
   const [agents, setAgents] = useState<any[]>([]);
@@ -79,6 +92,15 @@ export default function SettingsPage() {
       setLoading(false);
     }
   };
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['general', 'ddns', 'agents', 'notifications', 'security', 'system'].includes(tab)) {
+      setActiveTab(tab as any);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     loadSettings();
@@ -205,6 +227,7 @@ export default function SettingsPage() {
           { id: 'general', label: 'General', icon: Settings },
           { id: 'ddns', label: 'DDNS Engine', icon: Server },
           { id: 'agents', label: 'Remote Agents', icon: Radio },
+          { id: 'notifications', label: 'Notifications', icon: Bell },
           { id: 'security', label: 'Homelab Security', icon: Shield },
           { id: 'system', label: 'System Health', icon: Activity },
         ].map((tab) => {
@@ -403,6 +426,27 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Tab: Notifications */}
+      {activeTab === 'notifications' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-7">
+              <DiscordConfigForm onConfigChange={setPreviewConfig} />
+            </div>
+            <div className="lg:col-span-5 lg:sticky lg:top-6">
+              <DiscordEmbedPreview
+                botName={previewConfig.botName}
+                avatarUrl={previewConfig.avatarUrl}
+                timezone={previewConfig.timezone}
+                includeIpAddresses={previewConfig.includeIpAddresses}
+              />
+            </div>
+          </div>
+
+          <NotificationHistoryTable />
         </div>
       )}
 
@@ -632,5 +676,13 @@ export default function SettingsPage() {
         isDestructive
       />
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-xs text-slate-400">Loading settings...</div>}>
+      <SettingsPageContent />
+    </Suspense>
   );
 }
